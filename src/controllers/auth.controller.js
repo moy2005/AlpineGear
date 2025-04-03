@@ -66,23 +66,125 @@ export const register = async (req, res) => {
             { expiresIn: '10m' }
         );
 
-        // 7. Enviar correo de verificación
+        // 7. Enviar correo de verificación con diseño profesional
         try {
+            // Creando una plantilla de correo HTML más avanzada
+            const emailHtml = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación de Cuenta - AlpineGear</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #343a40; background-color: #f8f9fa;">
+    <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+        <!-- Header with Logo -->
+        <tr>
+            <td style="padding: 0;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                    <tr>
+                        <td style="background-color: #3e4095; padding: 30px 20px; text-align: center;">
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; justify-content: center; margin: 0 auto; width: fit-content;">
+                                            <!-- Mountain Icon -->
+                                            <div style="background-color: #f26522; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                                                <div style="border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 20px solid white; margin-top: -5px;"></div>
+                                            </div>
+                                            <!-- Brand Name -->
+                                            <h1 style="color: white; font-size: 26px; font-weight: 700; margin: 0;">AlpineGear</h1>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        
+        <!-- Main Content -->
+        <tr>
+            <td style="background-color: #ffffff; padding: 40px 30px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); border-radius: 0 0 8px 8px;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                    <!-- Greeting -->
+                    <tr>
+                        <td>
+                            <h2 style="color: #3e4095; font-size: 24px; font-weight: 600; margin-top: 0; margin-bottom: 20px;">Confirma tu Cuenta</h2>
+                            <p style="font-size: 16px; line-height: 1.6; color: #495057;">¡Hola <strong style="color: #3e4095;">${realName} ${lastName}</strong>!</p>
+                            <p style="font-size: 16px; line-height: 1.6; color: #495057; margin-bottom: 30px;">¡Gracias por unirte a AlpineGear! Para completar tu registro y acceder a nuestra tienda de equipamiento para aventuras al aire libre, necesitamos verificar tu dirección de correo electrónico.</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Verification Code Box -->
+                    <tr>
+                        <td>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                                <tr>
+                                    <td style="background-color: #f4f4fd; border-left: 4px solid #3e4095; border-radius: 8px; padding: 25px 20px; text-align: center;">
+                                        <p style="font-size: 14px; color: #495057; margin-top: 0; margin-bottom: 15px;">Tu código de verificación es:</p>
+                                        <p style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #3e4095; margin: 0;">${verificationCode}</p>
+                                        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed #dee2e6;">
+                                            <p style="color: #dc3545; font-size: 14px; margin: 0;">⏱️ Este código expirará en 10 minutos</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Instructions -->
+                    <tr>
+                        <td style="padding-top: 30px;">
+                            <p style="font-size: 16px; line-height: 1.6; color: #495057; margin-bottom: 25px;">Por favor ingresa este código en la página de verificación para completar tu registro. Si no has solicitado crear una cuenta en AlpineGear, puedes ignorar este mensaje.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        
+        <!-- Help Section -->
+        <tr>
+            <td style="padding: 30px 20px; text-align: center; background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
+                <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">¿Necesitas ayuda? Contáctanos en <a href="mailto:soporte@alpinegear.com" style="color: #3e4095; text-decoration: none;">soporte@alpinegear.com</a></p>
+                
+                <!-- Social Links -->
+                <table align="center" style="margin: 0 auto; text-align: center;">
+                    <tr>
+                        <td style="padding: 0 10px;">
+                            <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" width="24" height="24" alt="Facebook" style="border: 0;">
+                        </td>
+                        <td style="padding: 0 10px;">
+                            <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" width="24" height="24" alt="Instagram" style="border: 0;">
+                        </td>
+                        <td style="padding: 0 10px;">
+                            <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="24" height="24" alt="Twitter" style="border: 0;">
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        
+        <!-- Footer -->
+        <tr>
+            <td style="padding: 20px; text-align: center; color: #adb5bd; font-size: 12px;">
+                <p style="margin: 0 0 10px;">© ${new Date().getFullYear()} AlpineGear. Todos los derechos reservados.</p>
+                <p style="margin: 0;">Este correo fue enviado a ${email} porque se registró en AlpineGear.</p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+            `;
+
             await transporter.sendMail({
-                from: `"Alpine Gear" <${process.env.GMAIL_USER}>`,
+                from: `"AlpineGear" <${process.env.GMAIL_USER}>`,
                 to: email,
-                subject: 'Código de verificación - Alpine Gear',
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color:rgb(56, 49, 175);">¡Bienvenido a Alpine Gear!</h2>
-                        <p>Hola ${realName},</p>
-                        <p>Tu código de verificación es:</p>
-                        <h1 style="text-align: center; letter-spacing: 5px;">${verificationCode}</h1>
-                        <p>Este código expirará en 10 minutos.</p>
-                        <p>Si no solicitaste este registro, por favor ignora este mensaje.</p>
-                    </div>
-                `,
-                text: `Tu código de verificación para Alpine Gear es: ${verificationCode}. Este código expira en 10 minutos.`
+                subject: 'Verifica tu cuenta en AlpineGear',
+                html: emailHtml,
+                text: `Tu código de verificación para AlpineGear es: ${verificationCode}. Este código expira en 10 minutos. Ingresa este código en la página de verificación para completar tu registro.`
             });
         } catch (emailError) {
             console.error('Error al enviar email:', emailError);
