@@ -5,5 +5,5 @@ export const GMAIL_USER = "alpinegear0@gmail.com"
 export const GMAIL_PASS = "jwmr vfem xypl ontc"
 
 //Frontend URL
-export const FRONTEND_URL="http://localhost:5173,https://alpinegear.netlify.app"
+export const FRONTEND_URL="https://alpinegear.netlify.app"
 

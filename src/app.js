@@ -25,7 +25,7 @@ const app = express();
 
 // Configuración de CORS
 app.use(cors({
-    origin: "https://alpinegear.netlify.app/",
+    origin: "https://alpinegear.netlify.app",
     credentials: true
 }));
 
