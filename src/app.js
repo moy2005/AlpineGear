@@ -1,8 +1,3 @@
-// Este archivo configura la aplicación principal de Express para el backend. 
-// Aquí se incluyen middlewares como morgan, cors y cookie-parser, y se montan las rutas de autenticación y tareas.
-// Esto actúa como el núcleo del servidor, manejando la configuración global y la integración de rutas.
-
-// Importar módulos principales
 import mongoose from "mongoose"; 
 import express from "express";
 import dotenv from "dotenv";
@@ -23,36 +18,46 @@ dotenv.config();
 
 const app = express();
 
-// Configuración de CORS
+// Configuración de CORS mejorada
 app.use(cors({
-    origin: "https://alpinegear.netlify.app",
-    credentials: true
+    origin: "https://alpinegear.netlify.app", // Cambia esto
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(cookieParser());
 
-
 connectDB();
 
-// Configuración de la sesión
+// Configuración mejorada de la sesión
 app.use(session({
     secret: process.env.SESSION_SECRET || "super_secret_key",
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        client: mongoose.connection.getClient(), // Usar la conexión existente de mongoose
+        client: mongoose.connection.getClient(),
         collectionName: "sessions",
-        ttl: 10 * 60, // 10 minutos
-        autoRemove: 'native'
+        ttl: 14 * 24 * 60 * 60, // 14 días
+        autoRemove: 'interval',
+        autoRemoveInterval: 60 // En minutos
     }),
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // 🔥 Importante: true en producción (HTTPS)
         httpOnly: true,
-        maxAge: 10 * 60 * 1000 // 10 minutos
+        sameSite: 'none', // 🔥 Importante: 'none' para cross-site
+        maxAge: 14 * 24 * 60 * 60 * 1000 // 14 días
     }
 }));
+
+// Middleware para verificar sesión (opcional, para debug)
+app.use((req, res, next) => {
+    console.log('Session ID:', req.sessionID);
+    console.log('Session data:', req.session);
+    next();
+});
 
 // Montar las rutas
 app.use("/api", authRoutes);
