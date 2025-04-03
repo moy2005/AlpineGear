@@ -1,6 +1,3 @@
-/* Este archivo contiene los controladores relacionados con la autenticación de usuarios en una aplicación basada en Node.js y MongoDB.
-Los controladores permiten registrar usuarios, iniciar sesión, cerrar sesión, verificar tokens JWT y obtener información del perfil del usuario autenticado.
-Estos controladores interactúan con la base de datos y manejan las cookies para gestionar la autenticación y autorización. */
 
 import crypto from 'crypto'
 import User from '../models/user.model.js'
@@ -15,33 +12,35 @@ import userModel from '../models/user.model.js'
 export const register = async (req, res) => {
     const { email, password, realName, lastName, phoneNumber, secretWord, role } = req.body;
 
-  
-
     try {
-        // Validación de campos requeridos
+        // 1. Validación de campos requeridos
         if (!email || !password || !realName || !lastName || !phoneNumber || !secretWord) {
-            return res.status(400).json(["Todos los campos son requeridos"]);
+            return res.status(400).json({
+                success: false,
+                message: "Todos los campos son requeridos",
+                code: "MISSING_FIELDS"
+            });
         }
 
-        // Verificar si el usuario ya existe
+        // 2. Verificar si el usuario ya existe
         const userFound = await User.findOne({ email });
         if (userFound) {
-            return res.status(400).json(["El correo ya está en uso"]);
+            return res.status(400).json({
+                success: false,
+                message: "El correo ya está en uso",
+                code: "EMAIL_IN_USE"
+            });
         }
 
-        console.log('Original Password:', password);
-
-        // Encriptar contraseña
+        // 3. Encriptar contraseña
         const passwordHash = await bcrypt.hash(password, 10);
 
-        console.log('Generated Hash:', passwordHash);
-
-        // Generar código de verificación
-        const verificationCode = crypto.randomBytes(3).toString('hex');
+        // 4. Generar código de verificación (6 dígitos numéricos)
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         const verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // Expira en 10 minutos
 
-        // Crear nuevo usuario en memoria (pendiente de verificación)
-        const pendingUser = {
+        // 5. Crear nuevo usuario en la base de datos
+        const newUser = new User({
             email,
             password: passwordHash,
             realName,
@@ -52,34 +51,59 @@ export const register = async (req, res) => {
             verificationCode,
             verificationCodeExpires,
             isVerified: false
-        };
+        });
 
-        // Guardar los datos del usuario en la sesión (pendiente de verificación)
-        req.session.pendingUser = pendingUser;
+        await newUser.save();
 
-        // Enviar correo de verificación
+        // 6. Generar token temporal para verificación (válido por 10 minutos)
+        const tempToken = jwt.sign(
+            { 
+                id: newUser._id, 
+                purpose: 'email_verification',
+                code: verificationCode // Opcional: incluir el código en el token
+            }, 
+            TOKEN_SECRET, 
+            { expiresIn: '10m' }
+        );
+
+        // 7. Enviar correo de verificación
         try {
             await transporter.sendMail({
+                from: `"Alpine Gear" <${process.env.GMAIL_USER}>`,
                 to: email,
-                subject: 'Código de verificación',
-                text: `Tu código de verificación es: ${verificationCode}. Este código expira en 10 minutos.`,
+                subject: 'Código de verificación - Alpine Gear',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color:rgb(56, 49, 175);">¡Bienvenido a Alpine Gear!</h2>
+                        <p>Hola ${realName},</p>
+                        <p>Tu código de verificación es:</p>
+                        <h1 style="text-align: center; letter-spacing: 5px;">${verificationCode}</h1>
+                        <p>Este código expirará en 10 minutos.</p>
+                        <p>Si no solicitaste este registro, por favor ignora este mensaje.</p>
+                    </div>
+                `,
+                text: `Tu código de verificación para Alpine Gear es: ${verificationCode}. Este código expira en 10 minutos.`
             });
         } catch (emailError) {
             console.error('Error al enviar email:', emailError);
-            // No retornamos error aquí para no bloquear el registro
+            // No detenemos el proceso aunque falle el envío del correo
         }
 
-        // Responder exitosamente
+        // 8. Responder con éxito
         return res.status(201).json({
-            message: 'Usuario registrado. Por favor, verifica tu correo.',
-            success: true
+            success: true,
+            message: 'Usuario registrado. Por favor verifica tu correo electrónico.',
+            tempToken, // Token temporal para la verificación
+            userId: newUser._id // Opcional: enviar el ID para referencia
         });
 
     } catch (error) {
         console.error('Error en registro:', error);
         return res.status(500).json({
+            success: false,
             message: "Error al registrar usuario",
-            error: error.message
+            error: error.message,
+            code: "SERVER_ERROR"
         });
     }
 };
@@ -510,48 +534,60 @@ export const sendVerificationCode = async (req, res) => {
 };
 
 
-
 export const verifyEmailCode = async (req, res) => {
-    if (!req.session || !req.session.pendingUser) {
-        return res.status(400).json({
-            message: "No hay sesión activa o el código expiró.",
-            code: "SESSION_EXPIRED"
-        });
-    }
-
-    const { email, code } = req.body;
-    const pendingUser = req.session.pendingUser;
-
-    if (email !== pendingUser.email) {
-        return res.status(400).json({ message: "El email no coincide con la sesión actual" });
-    }
-
-    if (code !== pendingUser.verificationCode) {
-        return res.status(400).json({ message: "Código de verificación incorrecto" });
-    }
-
-    if (new Date() > new Date(pendingUser.verificationCodeExpires)) {
-        return res.status(400).json({ message: "El código ha expirado", code: "CODE_EXPIRED" });
-    }
+    const { email, code, tempToken } = req.body;
 
     try {
-        const newUser = new User({
+        // Verificar token temporal
+        const decoded = jwt.verify(tempToken, TOKEN_SECRET);
+        
+        // Buscar usuario
+        const user = await User.findOne({
+            _id: decoded.id,
             email,
-            password: pendingUser.password,  // Use the original hashed password
-            realName: pendingUser.realName,
-            lastName: pendingUser.lastName,
-            phoneNumber: pendingUser.phoneNumber,
-            secretWord: pendingUser.secretWord,
-            role: "cliente",
-            isVerified: true
+            verificationCode: code
         });
 
-        await newUser.save();
-        req.session.destroy();
+        if (!user) {
+            return res.status(400).json({ 
+                message: "Código inválido o expirado",
+                code: "INVALID_CODE"
+            });
+        }
 
-        return res.status(201).json({ success: true, message: "Usuario registrado correctamente" });
+        if (user.verificationCodeExpires < new Date()) {
+            return res.status(400).json({ 
+                message: "El código ha expirado", 
+                code: "CODE_EXPIRED" 
+            });
+        }
+
+        // Actualizar usuario
+        user.isVerified = true;
+        user.verificationCode = null;
+        user.verificationCodeExpires = null;
+        await user.save();
+
+        // Generar token definitivo
+        const token = jwt.sign(
+            { id: user._id, role: user.role }, 
+            TOKEN_SECRET, 
+            { expiresIn: '1d' }
+        );
+
+        return res.status(200).json({ 
+            success: true, 
+            message: "Usuario verificado correctamente",
+            token
+        });
+
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        console.error('Error en verifyEmailCode:', error);
+        return res.status(400).json({
+            message: error.message.includes('jwt expired') 
+                ? "Token temporal expirado, por favor registrese nuevamente"
+                : "Error al verificar el código",
+            code: "VERIFICATION_ERROR"
+        });
     }
 };
-

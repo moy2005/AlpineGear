@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import session from "express-session";
-import MongoStore from "connect-mongo";
+
+
 import { connectDB } from "./db.js"; 
 import authRoutes from "./routes/auth.routes.js";
 import productRoutes from "./routes/products.routes.js";
@@ -35,25 +35,7 @@ app.use(cookieParser());
 connectDB();
 
 // Configuración mejorada de la sesión
-app.use(session({
-    secret: 'unaClaveSuperSegura',
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      client: mongoose.connection.getClient(),
-      collectionName: 'sessions',
-      ttl: 24 * 60 * 60,
-      autoRemove: 'interval',
-      autoRemoveInterval: 10
-    }),
-    cookie: {
-      secure: true,
-      httpOnly: true,
-      sameSite: 'none',
-      maxAge: 24 * 60 * 60 * 1000,
-      domain: process.env.NODE_ENV === 'production' ? '.alpine-gear.vercel.app' : undefined
-    }
-  }));
+
 
 // Middleware para verificar sesión (opcional, para debug)
 app.use((req, res, next) => {
