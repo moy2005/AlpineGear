@@ -20,11 +20,10 @@ const app = express();
 
 // Configuración de CORS mejorada
 app.use(cors({
-    origin: "https://alpinegear.netlify.app", // Cambia esto
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    origin: 'https://alpinegear.netlify.app',
+    credentials: true
 }));
+
 
 app.use(morgan("dev"));
 app.use(express.json());
@@ -34,23 +33,24 @@ connectDB();
 
 // Configuración mejorada de la sesión
 app.use(session({
-    secret: process.env.SESSION_SECRET || "super_secret_key",
+    secret: 'unaClaveSuperSegura',
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        client: mongoose.connection.getClient(),
-        collectionName: "sessions",
+        client: mongoose.connection.getClient(), // Usa la conexión existente
+        collectionName: 'sessions',
         ttl: 14 * 24 * 60 * 60, // 14 días
         autoRemove: 'interval',
-        autoRemoveInterval: 60 // En minutos
+        autoRemoveInterval: 60 // Limpiar cada 60 minutos
     }),
     cookie: {
-        secure: true, // 🔥 Importante: true en producción (HTTPS)
+        secure: true,
         httpOnly: true,
-        sameSite: 'none', // 🔥 Importante: 'none' para cross-site
+        sameSite: 'none',
         maxAge: 14 * 24 * 60 * 60 * 1000 // 14 días
     }
 }));
+
 
 // Middleware para verificar sesión (opcional, para debug)
 app.use((req, res, next) => {
